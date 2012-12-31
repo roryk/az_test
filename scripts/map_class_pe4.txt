@@ -1,5 +1,0 @@
-SLXA-EAS1_89:1:1:721:668/1 amb 1000==0==1000==0
-SLXA-EAS1_89:1:1:675:644/1 amb 1000==0==1000==0
-SLXA-EAS1_89:1:1:708:653/1 amb 1000==0==1000==0
-SLXA-EAS1_89:1:1:657:649/1 mouse by unmatched first 2 reads 1000==1000==1000==0
-SLXA-EAS1_89:1:1:672:654/1 human by first 2 reads 1000==0==1000==1000
