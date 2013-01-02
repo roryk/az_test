@@ -20,6 +20,7 @@ from bipy.toolbox.trim import Cutadapt
 from bipy.toolbox.fastqc import FastQC
 from bipy.toolbox.fastq import HardClipper
 from bipy.toolbox.tophat import Tophat
+from bipy.plugins import StageRepository
 
 import glob
 from itertools import product, repeat, islice
@@ -90,6 +91,10 @@ def main(config_file):
 
     results_dir = config["dir"]["results"]
     safe_makedir(results_dir)
+
+    # make the stage repository
+    repository = StageRepository(config)
+
     if config.get("test_pipeline", False):
         logger.info("Running a test pipeline on a subset of the reads.")
         results_dir = os.path.join(results_dir, "test_pipeline")
@@ -114,27 +119,22 @@ def main(config_file):
             curr_files = view.map(stage_runner, curr_files)
 
         if stage == "tophat":
-            logger.info("Running tophat on %s." % (curr_files))
-            stage_runner = Tophat(config)
-            tophat_outputs = view.map(stage_runner, curr_files)
+            logger.info("Running Tophat on %s." % (curr_files))
+            tophat_human = repository["tophat_human"](config)
+            tophat_mouse = repository["tophat_mouse"](config)
+            human_results = view.map(tophat_human, curr_files)
+            mouse_results = view.map(tophat_mouse, curr_files)
+            tophat_outputs = human_results + mouse_results
             bamfiles = view.map(sam.sam2bam, tophat_outputs)
             bamsort = view.map(sam.bamsort, bamfiles)
             view.map(sam.bamindex, bamsort)
             final_bamfiles = bamsort
-            curr_files = tophat_outputs
+            curr_files = zip(human_results, mouse_results)
 
-        if stage == "hard_clip":
-            curr_files = combine_pairs(curr_files)
-            first = [x[0] for x in curr_files]
-            second = [x[1] for x in curr_files]
-            logger.info("Running hard clip on %s." % (second))
-            clipper = HardClipper(config)
-            new_second = view.map(clipper, second)
-            # match up the first pair names with the clipped second pair names
-            new_first = map(clipper.out_file, first)
-            [os.symlink(f, nf) for f, nf in zip(first, new_first)]
-            curr_files = new_first + new_second
-
+        if stage == "disambiguate":
+            logger.info("Disambiguating %s." % (curr_files))
+            disambiguate = repository[stage](config)
+            view.map(disambiguate, curr_files)
 
         if stage == "htseq-count":
             logger.info("Running htseq-count on %s." % (curr_files))
