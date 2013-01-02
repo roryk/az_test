@@ -53,18 +53,21 @@ stage:
       error-rate: 0.1
       quality-cutoff: 20
 
-  tophat:
+  tophat_mouse:
     name: tophat
     program: tophat
     max_errors: 2
     quality_format: sanger
+    ref: /n/hsphS10/hsphfs1/chb/biodata/genomes/Mmusculus/mm9/iGenomes/Ensembl/NCBIM37/Sequence/BowtieIndex/genome
+    gtf: /n/hsphS10/hsphfs1/chb/biodata/genomes/Mmusculus/mm9/iGenomes/Ensembl/NCBIM37/Annotation/Genes/genes.gtf
 
-  sickle:
-    name: sickle
-    program: sickle
-    quality_type: sanger
-    length_cutoff: 20
-    quality_cutoff: 20
+  tophat_human:
+    name: tophat
+    program: tophat
+    max_errors: 2
+    quality_format: sanger
+    ref: /n/hsphS10/hsphfs1/chb/biodata/genomes/Hsapiens/hg19/iGenomes/Homo_sapiens/Ensembl/GRCh37/Sequence/BowtieIndex/genome
+    gtf: /n/hsphS10/hsphfs1/chb/biodata/genomes/Hsapiens/hg19/iGenomes/Homo_sapiens/Ensembl/GRCh37/Annotation/Genes/genes.gtf
 
   htseq-count:
     program: htseq-count
@@ -89,10 +92,6 @@ stage:
   rseqc:
     name: rseqc
 
-  hard_clip:
-    bases: 13
-    right_side: False
-
 # order to run the stages in
 run:
-  [fastqc, hard_clip, fastqc, cutadapt, fastqc, tophat, coverage, rseqc, htseq-count]
+  [fastqc, cutadapt, fastqc, tophat_mouse, tophat_human, disambiguate, coverage, rseqc, htseq-count]
