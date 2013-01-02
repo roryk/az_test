@@ -1,21 +1,66 @@
-# scripts to run data analysis on tuberous sclerosis mice
+"""
+example script for running a RNA-seq analysis
+
+python rnaseq_pipeline.py rnaseq_pipeline.yaml
+
+you will have to write a couple of functions to group the input
+data in useful ways
+
+"""
 from bipy.cluster import start_cluster, stop_cluster
 import sys
 import yaml
 from bipy.log import setup_logging, logger
 from bcbio.utils import safe_makedir, file_exists
-import csv
-import os
-from bipy.utils import (append_stem, combine_pairs, flatten, dict_to_vectors,
-                        prepare_ref_file, replace_suffix, is_pair)
-from bipy.toolbox import (fastqc, sickle, cutadapt_tool, tophat,
-                           htseq_count, deseq, fastq, annotate, rseqc, sam)
+from bipy.utils import (combine_pairs, flatten, append_stem,
+                        prepare_ref_file, replace_suffix)
+from bipy.toolbox import (htseq_count, deseq, annotate, rseqc, sam)
 from bcbio.broad import BroadRunner, picardrun
-from bipy.pipeline.stages import AbstractStage
-import sh
+from bipy.toolbox.trim import Cutadapt
+from bipy.toolbox.fastqc import FastQC
+from bipy.toolbox.fastq import HardClipper
+from bipy.toolbox.tophat import Tophat
 
 import glob
-from itertools import product, repeat
+from itertools import product, repeat, islice
+import sh
+import os, fnmatch
+
+def locate(pattern, root=os.curdir):
+    '''Locate all files matching supplied filename pattern in and below
+    supplied root directory.'''
+    for path, dirs, files in os.walk(os.path.abspath(root)):
+        for filename in fnmatch.filter(files, pattern):
+            yield os.path.join(path, filename)
+
+def find_files(in_dir):
+    """
+    returns a list of the sequence files in a directory recursively
+
+    """
+
+    FASTQ_EXTENSIONS = [".fq", ".fastq"]
+    files = [sh.find(in_dir, "-name", "*" + x) for x in FASTQ_EXTENSIONS]
+    return files
+
+
+def make_test(in_file, config, lines=1000000):
+    """
+    take a small subset of the input files for testing. only makes sense for
+    text files where lines gives an appopriate number of records, for example,
+    FASTQ files should be a multiple of 4.
+
+    """
+    results_dir = config["dir"]["results"]
+    out_dir = os.path.join(results_dir, "test", "data")
+    safe_makedir(out_dir)
+    out_file = os.path.join(out_dir,
+                            append_stem(os.path.basename(in_file), "test"))
+    with open(in_file) as in_handle, open(out_file, "w") as out_handle:
+        for line in islice(in_handle, lines):
+            out_handle.write(line)
+
+    return out_file
 
 
 def _get_stage_config(config, stage):
@@ -29,42 +74,6 @@ def _get_program(config, stage):
 def _emit_stage_message(stage, curr_files):
     logger.info("Running %s on %s" % (stage, curr_files))
 
-def _find_input_files(config):
-    input_dirs = config["input_dirs"]
-    """ find all of the fastq files by identifier """
-    identifier = config["sample_parse"]["identifier"]
-    input_files = [glob.glob(os.path.join(config["dir"]["data"],
-                                          input_dir,
-                                          identifier))
-                                          for input_dir in input_dirs]
-    return list(flatten(input_files))
-
-
-def _group_input_by_condition(in_files, delimiter = "_"):
-    def _add_entry(d, v):
-        base = os.path.basename(v)
-        k = base.split(delimiter)[1]
-        d[k] = d.get(k, []) + [v]
-        return d
-
-    return reduce(_add_entry, in_files, {})
-
-
-def _group_input_by_cell_type(in_files, delimiter = "_"):
-    def _add_entry(d, v):
-        base = os.path.basename(v)
-        k = base.split(delimiter)[0]
-        if "PbN" in k:
-            d["PbN"] = d.get("PbN", []) + [v]
-        elif "Pb" in k:
-            d["Pb"] = d.get("Pb", []) + [v]
-        else:
-            logger.error("Error grouping by cell type")
-            exit(-1)
-        return d
-
-    return reduce(_add_entry, in_files, {})
-
 
 def main(config_file):
     with open(config_file) as in_handle:
@@ -73,200 +82,109 @@ def main(config_file):
     # make the needed directories
     map(safe_makedir, config["dir"].values())
 
-    # specific for thesis pipeline
-    input_dirs = config["input_dirs"]
+    # specific for project
+    input_dir = config["input_dir"]
+    logger.info("Loading files from %s" % (input_dir))
+    input_files = list(locate("*.fastq", input_dir))
+    logger.info("Input files: %s" % (input_files))
 
-    results_dir = config["dir"].get("results", "results")
-    input_files = _find_input_files(config)
-    conditions = _group_input_by_condition(input_files)
-    logger.info("Input_files: %s" % (input_files))
-    logger.info("Condition groups %s" %(conditions))
-    htseq_outdict = {}
+    results_dir = config["dir"]["results"]
+    safe_makedir(results_dir)
+    if config.get("test_pipeline", False):
+        logger.info("Running a test pipeline on a subset of the reads.")
+        results_dir = os.path.join(results_dir, "test_pipeline")
+        config["dir"]["results"] = results_dir
+        safe_makedir(results_dir)
+        curr_files = map(make_test, input_files, [config] * len(input_files))
+        logger.info("Converted %s to %s. " % (input_files, curr_files))
+    else:
+        curr_files = input_files
+        logger.info("Running RNASeq alignment pipeline on %s." % (curr_files))
 
-    for condition, curr_files in conditions.items():
-        condition_dir = os.path.join(results_dir, condition)
-        safe_makedir(condition_dir)
-        config["dir"]["results"] = condition_dir
+    for stage in config["run"]:
+        if stage == "fastqc":
+            logger.info("Running fastqc on %s." % (curr_files))
+            stage_runner = FastQC(config)
+            view.map(stage_runner, curr_files, block=False)
 
-        for stage in config["run"]:
-            if stage == "fastqc":
-                _emit_stage_message(stage, curr_files)
-                fastqc_config = _get_stage_config(config, stage)
-                fastqc_args = zip(*product(curr_files, [fastqc_config],
-                                           [config]))
-                view.map(fastqc.run, *fastqc_args)
+        if stage == "cutadapt":
+            curr_files = combine_pairs(curr_files)
+            logger.info("Running cutadapt on %s." % (curr_files))
+            stage_runner = Cutadapt(config)
+            curr_files = view.map(stage_runner, curr_files)
 
-            if stage == "cutadapt":
-                _emit_stage_message(stage, curr_files)
-                cutadapt_config = _get_stage_config(config, stage)
-                cutadapt_args = zip(*product(curr_files, [cutadapt_config],
-                                             [config]))
-                cutadapt_outputs = view.map(cutadapt_tool.run, *cutadapt_args)
-                curr_files = cutadapt_outputs
-                logger.info("Fixing mate pair information.")
-                pairs = combine_pairs(curr_files)
-                first = [x[0] for x in pairs]
-                second = [x[1] for x in pairs]
-                logger.info("Forward: %s" % (first))
-                logger.info("Reverse: %s" % (second))
-                fixed = view.map(fastq.fix_mate_pairs_with_config,
-                                 first, second, [config] * len(first))
-                curr_files = list(flatten(fixed))
+        if stage == "tophat":
+            logger.info("Running tophat on %s." % (curr_files))
+            stage_runner = Tophat(config)
+            tophat_outputs = view.map(stage_runner, curr_files)
+            bamfiles = view.map(sam.sam2bam, tophat_outputs)
+            bamsort = view.map(sam.bamsort, bamfiles)
+            view.map(sam.bamindex, bamsort)
+            final_bamfiles = bamsort
+            curr_files = tophat_outputs
 
-            if stage == "sickle":
-                _emit_stage_message(stage, curr_files)
-                pairs = combine_pairs(curr_files)
-                first = [x[0] for x in pairs]
-                second = [x[1] for x in pairs]
-                fixed = view.map(sickle.run_with_config,
-                                 first, second, [config] * len(first))
-                curr_files = list(flatten(fixed))
+        if stage == "hard_clip":
+            curr_files = combine_pairs(curr_files)
+            first = [x[0] for x in curr_files]
+            second = [x[1] for x in curr_files]
+            logger.info("Running hard clip on %s." % (second))
+            clipper = HardClipper(config)
+            new_second = view.map(clipper, second)
+            # match up the first pair names with the clipped second pair names
+            new_first = map(clipper.out_file, first)
+            [os.symlink(f, nf) for f, nf in zip(first, new_first)]
+            curr_files = new_first + new_second
 
-            if stage == "tophat":
-                _emit_stage_message(stage, curr_files)
-                tophat_config = _get_stage_config(config, stage)
-                pairs = combine_pairs(curr_files)
-                first = [x[0] for x in pairs]
-                second = [x[1] for x in pairs]
-                logger.info("first %s" % (first))
-                logger.info("second %s" % (second))
 
-                #tophat_args = zip(*product(first, second, [config["ref"]],
-                #                           ["tophat"], [config]))
-                tophat_outputs = view.map(tophat.run_with_config,
-                                          first, second,
-                                          [config["ref"]] * len(first),
-                                          ["tophat"] * len(first),
-                                          [config] * len(first))
-                bamfiles = view.map(sam.sam2bam, tophat_outputs)
-                bamsort = view.map(sam.bamsort, bamfiles)
-                view.map(sam.bamindex, bamsort)
-                final_bamfiles = bamsort
-                curr_files = tophat_outputs
+        if stage == "htseq-count":
+            logger.info("Running htseq-count on %s." % (curr_files))
+            htseq_args = zip(*product(curr_files, [config], [stage]))
+            htseq_outputs = view.map(htseq_count.run_with_config,
+                                     *htseq_args)
 
-            if stage == "htseq-count":
-                _emit_stage_message(stage, curr_files)
-                htseq_config = _get_stage_config(config, stage)
-                htseq_args = zip(*product(curr_files, [config], [stage]))
-                htseq_outputs = view.map(htseq_count.run_with_config,
-                                         *htseq_args)
-                htseq_outdict[condition] = htseq_outputs
+        if stage == "coverage":
+            logger.info("Calculating RNASeq metrics on %s." % (curr_files))
+            nrun = len(curr_files)
+            ref = prepare_ref_file(config["stage"][stage]["ref"], config)
+            ribo = config["stage"][stage]["ribo"]
+            picard = BroadRunner(config["program"]["picard"])
+            out_dir = os.path.join(results_dir, stage)
+            safe_makedir(out_dir)
+            out_files = [replace_suffix(os.path.basename(x),
+                                        "metrics") for x in curr_files]
+            out_files = [os.path.join(out_dir, x) for x in out_files]
+            out_files = view.map(picardrun.picard_rnaseq_metrics,
+                                 [picard] * nrun,
+                                 curr_files,
+                                 [ref] * nrun,
+                                 [ribo] * nrun,
+                                 out_files)
 
-            if stage == "coverage":
-                logger.info("Calculating RNASeq metrics on %s." % (curr_files))
-                nrun = len(curr_files)
-                ref = prepare_ref_file(config["stage"][stage]["ref"], config)
-                ribo = config["stage"][stage]["ribo"]
-                picard = BroadRunner(config["program"]["picard"])
-                out_dir = os.path.join(results_dir, stage)
-                safe_makedir(out_dir)
-                out_files = [replace_suffix(os.path.basename(x),
-                                            "metrics") for x in curr_files]
-                out_files = [os.path.join(out_dir, x) for x in out_files]
-                out_files = view.map(picardrun.picard_rnaseq_metrics,
-                                     [picard] * nrun,
-                                     curr_files,
-                                     [ref] * nrun,
-                                     [ribo] * nrun,
-                                     out_files)
-
-            if stage == "rseqc":
-                _emit_stage_message(stage, curr_files)
-                rseqc_config = _get_stage_config(config, stage)
-                rseq_args = zip(*product(curr_files, [config]))
-                view.map(rseqc.bam_stat, *rseq_args)
-                view.map(rseqc.genebody_coverage, *rseq_args)
-                view.map(rseqc.junction_annotation, *rseq_args)
-                view.map(rseqc.junction_saturation, *rseq_args)
-                RPKM_args = zip(*product(final_bamfiles, [config]))
-                RPKM_count_out = view.map(rseqc.RPKM_count, *RPKM_args)
-                RPKM_count_fixed = view.map(rseqc.fix_RPKM_count_file,
-                                            RPKM_count_out)
-                """
-                                annotate_args = zip(*product(RPKM_count_fixed,
-                                             ["gene_id"],
-                                             ["ensembl_gene_id"],
-                                             ["human"]))
-                view.map(annotate.annotate_table_with_biomart,
-                         *annotate_args)
-                         """
-                view.map(rseqc.RPKM_saturation, *rseq_args)
-                curr_files = tophat_outputs
-
-    # combine htseq-count files and run deseq on them
-    conditions, htseq_files = dict_to_vectors(htseq_outdict)
-    deseq_config = _get_stage_config(config, "deseq")
-    cell_types = _group_input_by_cell_type(htseq_files)
-    for cell_type, files in cell_types.items():
-        for comparison in deseq_config["comparisons"]:
-            comparison_name = "_vs_".join(comparison)
-            deseq_dir = os.path.join(results_dir, "deseq", cell_type,
-                                     comparison_name)
-            safe_makedir(deseq_dir)
-            out_file = os.path.join(deseq_dir, comparison_name + ".counts.txt")
-            files_by_condition = _group_input_by_condition(files)
-            _emit_stage_message("deseq", files_by_condition)
-            c, f = dict_to_vectors(files_by_condition)
-            combined_out = htseq_count.combine_counts(f,
-                                                      None,
-                                                      out_file)
-            deseq_out = os.path.join(deseq_dir, comparison_name)
-            logger.info("Running deseq on %s with conditions %s "
-                        "and writing ot %s" % (combined_out,
-                                               conditions,
-                                               deseq_out))
-            deseq_out = view.map(deseq.run, [combined_out], [c], [deseq_out])
-            annotate.annotate_table_with_biomart(deseq_out[0],
-                                                 "id",
-                                                 "ensembl_gene_id",
-                                                 "human")
-            #annotated_file = view.map(annotate.annotate_table_with_biomart,
-            #                          [deseq_out],
-            #                          ["id"],
-            #                          ["ensembl_gene_id"],
-            #                          ["human"])
+        if stage == "rseqc":
+            _emit_stage_message(stage, curr_files)
+            rseq_args = zip(*product(curr_files, [config]))
+            view.map(rseqc.bam_stat, *rseq_args)
+            view.map(rseqc.genebody_coverage, *rseq_args)
+            view.map(rseqc.junction_annotation, *rseq_args)
+            view.map(rseqc.junction_saturation, *rseq_args)
+            RPKM_args = zip(*product(final_bamfiles, [config]))
+            RPKM_count_out = view.map(rseqc.RPKM_count, *RPKM_args)
+            RPKM_count_fixed = view.map(rseqc.fix_RPKM_count_file,
+                                        RPKM_count_out)
+            """
+                            annotate_args = zip(*product(RPKM_count_fixed,
+                                         ["gene_id"],
+                                         ["ensembl_gene_id"],
+                                         ["human"]))
+            view.map(annotate.annotate_table_with_biomart,
+                     *annotate_args)
+                     """
+            view.map(rseqc.RPKM_saturation, *rseq_args)
+            curr_files = tophat_outputs
 
     # end gracefully
     stop_cluster()
 
-
-class Disambiguation(AbstractStage):
-
-    stage = "disambiguate"
-
-    def __init__(self, config):
-        self.config = config
-        self.stage_config = config["stage"]["disambiguate"]
-        self.disambiguate = self.stage_config.get("program",
-                                                  "scripts/disamb_byMapping.pl")
-
-    def __call__(self, pair):
-        """
-        disambiguate a pair of sam files
-
-        """
-        sam_files = self._type_check(pair)
-        out_files = self.out_files(pair)
-        #disambiguate = sh.Command("perl " + self.disambiguate)
-
-
-    def out_files(self, pair):
-        """
-        returns what the expected output files are from this stage
-
-        """
-        pass
-
-    def _type_check(self, pair):
-        if not is_pair(pair):
-            raise ValueError("Disambiguation is expecting a pair of SAM "
-                             "files.")
-        if not all(map(sam.is_sam, pair)):
-            raise ValueError("Provided files to disambiguation do not have "
-                             "a .sam extention.")
-        if all(map(sam.is_bam, pair)):
-            return map(sam.bam2sam, pair)
-        return pair
 
 if __name__ == "__main__":
     # read in the config file and perform initial setup
@@ -276,5 +194,4 @@ if __name__ == "__main__":
     setup_logging(startup_config)
     start_cluster(startup_config)
     from bipy.cluster import view
-
     main(main_config_file)
