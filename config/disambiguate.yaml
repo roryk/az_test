@@ -1,0 +1,30 @@
+# example configuration file for rna-seq analysis
+cluster:
+  name: odyssey # arbitrary name
+  profile: lsf # ipython profile to run under
+  cores: 8 # number of ipython engines to spin up
+  timeout: 10000 # time to wait for the cluster to be up before failing
+  delay: 20 # the delay in spinning up engines once the controller is up
+
+dir:
+  results: results # results will go in this directory
+  doc: doc # documentation for this analysis goes here
+  ref: ref # reference files
+  data: data # raw data goes here. make everything read only for safety
+  meta: meta # metadata (annotation, etc) goes here
+
+test_pipeline: False
+
+log_dir: log
+
+input_dir_human: results/human_mapping
+input_dir_mouse: results/mouse_mapping
+
+# configuration options for each stage of the analysis
+stage:
+  disambiguate:
+    program: plugins/scripts/disamb_byMapping2.pl
+
+# order to run the stages in
+run:
+  [disambiguate]

@@ -5,8 +5,9 @@ wrapper around Qi's diambiguate script
 
 from bipy.pipeline.stages import AbstractStage
 from bipy.utils import flatten
-from bcbio.utils import safe_makedir
+from bcbio.utils import safe_makedir, file_exists
 import os
+import sh
 
 
 class Disambiguate(AbstractStage):
@@ -32,9 +33,11 @@ class Disambiguate(AbstractStage):
     """
 
     stage = "disambiguate"
+    organisms = ("Human", "Mouse")
 
     def __init__(self, config):
-        self.config = config
+        # abstract class does some simple initialization for us
+        super(Disambiguate, self).__init__(config)
         self.stage_config = config["stage"][self.stage]
         self.out_dir = os.path.join(config["dir"].get("results", "results"),
                                     self.stage)
@@ -47,13 +50,28 @@ class Disambiguate(AbstractStage):
         running disambiguate on the tuple of input files
         """
         return list(flatten(map(self._organism_files,
-                                in_tuple, ("Human", "Mouse"))))
+                                in_tuple, self.organisms)))
 
     def _organism_files(self, in_file, organism):
         base, _ = os.path.splitext(os.path.basename(in_file))
         disamb = base + ".disambiguous" + organism + ".sam"
         ambig = base + ".ambiguous" + organism + ".sam"
-        return [os.path.join(self.out_dir, x) for x in (disamb, ambig)]
+        return [os.path.join(self.out_dir, x) for x in
+                (disamb, ambig)]
 
-    def __call__(self):
-        pass
+    def _disambiguate(self, org1_sam, org2_sam):
+        run_disambiguate = sh.Command(self.program)
+        out_files = self.out_file((org1_sam, org2_sam))
+        # if files exist already and are non-zero, skip this step
+        if all(map(file_exists, out_files)):
+            return out_files
+
+        # disambiguate and return the output filenames
+        run_disambiguate(org1_sam, org2_sam, self.out_dir)
+        return out_files
+
+    def __call__(self, in_files):
+        self._start_message(in_files)
+        # first is human, second is mouse
+        self._disambiguate(in_files[0], in_files[1])
+        self._end_message(in_files)
