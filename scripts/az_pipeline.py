@@ -86,7 +86,8 @@ def main(config_file):
     # specific for project
     input_dir = config["input_dir"]
     logger.info("Loading files from %s" % (input_dir))
-    input_files = list(locate("*.fastq", input_dir))
+    input_files = list(locate("*.fq", input_dir))
+    input_files += list(locate("*.fastq", input_dir))
     logger.info("Input files: %s" % (input_files))
 
     results_dir = config["dir"]["results"]
@@ -94,6 +95,7 @@ def main(config_file):
 
     # make the stage repository
     repository = StageRepository(config)
+    logger.info("Stages found: %s" % (repository.plugins))
 
     if config.get("test_pipeline", False):
         logger.info("Running a test pipeline on a subset of the reads.")
@@ -120,16 +122,13 @@ def main(config_file):
 
         if stage == "tophat":
             logger.info("Running Tophat on %s." % (curr_files))
-            tophat_human = repository["tophat_human"](config)
-            tophat_mouse = repository["tophat_mouse"](config)
-            human_results = view.map(tophat_human, curr_files)
-            mouse_results = view.map(tophat_mouse, curr_files)
-            tophat_outputs = human_results + mouse_results
+            tophat = repository["tophat"](config)
+            tophat_results = view.map(tophat, curr_files)
             bamfiles = view.map(sam.sam2bam, tophat_outputs)
             bamsort = view.map(sam.bamsort, bamfiles)
             view.map(sam.bamindex, bamsort)
             final_bamfiles = bamsort
-            curr_files = zip(human_results, mouse_results)
+            curr_files = tophat_results
 
         if stage == "disambiguate":
             logger.info("Disambiguating %s." % (curr_files))
