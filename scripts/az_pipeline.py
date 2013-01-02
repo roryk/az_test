@@ -123,12 +123,12 @@ def main(config_file):
         if stage == "tophat":
             logger.info("Running Tophat on %s." % (curr_files))
             tophat = repository["tophat"](config)
-            tophat_results = view.map(tophat, curr_files)
+            tophat_outputs = view.map(tophat, curr_files)
             bamfiles = view.map(sam.sam2bam, tophat_outputs)
             bamsort = view.map(sam.bamsort, bamfiles)
             view.map(sam.bamindex, bamsort)
             final_bamfiles = bamsort
-            curr_files = tophat_results
+            curr_files = tophat_outputs
 
         if stage == "disambiguate":
             logger.info("Disambiguating %s." % (curr_files))
