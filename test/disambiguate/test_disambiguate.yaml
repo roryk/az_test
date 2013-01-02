@@ -1,0 +1,22 @@
+# configuration file for testing the disambiguate script
+
+dir:
+  results: results/test/disambiguate # results will go in this directory
+  doc: doc # documentation for this analysis goes here
+  ref: ref # reference files
+  data: data # raw data goes here. make everything read only for safety
+  meta: meta # metadata (annotation, etc) goes here
+  plugins: /Users/rory/cache/az/plugins
+
+input: [../data/small_1.human.sam, ../data/small_1.mouse.sam]
+
+program:
+  fastqc: fastqc
+  tophat: tophat
+  bowtie: bowtie
+  picard: /n/home05/kirchner/opt/lib/java/picard-tools-1.74
+
+# configuration options for each stage of the analysis
+stage:
+  disambiguate:
+    program: /Users/rory/cache/az/plugins/scripts/disamb_byMapping2.pl
