@@ -2,7 +2,7 @@
 cluster:
   name: odyssey # arbitrary name
   profile: lsf # ipython profile to run under
-  cores: 8 # number of ipython engines to spin up
+  cores: 2 # number of ipython engines to spin up
   timeout: 10000 # time to wait for the cluster to be up before failing
   delay: 20 # the delay in spinning up engines once the controller is up
 
@@ -17,7 +17,7 @@ test_pipeline: False
 
 log_dir: log
 
-input_dir: data
+input_dir: test/data
 
 ref: /n/hsphS10/hsphfs1/chb/biodata/genomes/Hsapiens/hg19/iGenomes/Homo_sapiens/Ensembl/GRCh37/Sequence/BowtieIndex/genome
 gtf: /n/hsphS10/hsphfs1/chb/biodata/genomes/Hsapiens/hg19/iGenomes/Homo_sapiens/Ensembl/GRCh37/Annotation/Genes/genes.gtf
