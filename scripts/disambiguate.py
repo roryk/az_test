@@ -42,7 +42,15 @@ def _emit_stage_message(stage, curr_files):
 def find_sam_files(in_dir):
     logger.info("Finding SAM files in %s." % (in_dir))
     # the descriptive filenames are symbolic links so find all of them
-    files = filter(os.path.islink, locate(".sam", in_dir)).sort()
+    files = list(locate("*.sam", in_dir))
+    logger.info("Found %s." % (files))
+    links = filter(os.path.islink, files)
+    logger.info("Found %s." % (links))
+    return links
+
+def find_bam_files(in_dir):
+    logger.info("Finding BAM files in %s." % (in_dir))
+    files = list(locate("*.sorted.bam", in_dir))
     logger.info("Found %s." % (files))
     return files
 
@@ -55,8 +63,10 @@ def main(config_file):
     map(safe_makedir, config["dir"].values())
 
     # specific for project
-    human_input = find_sam_files(config["input_dir_human"])
-    mouse_input = find_sam_files(config["input_dir_mouse"])
+    #human_input = find_sam_files(config["input_dir_human"])
+    #mouse_input = find_sam_files(config["input_dir_mouse"])
+    human_input = find_bam_files(config["input_dir_human"])
+    mouse_input = find_bam_files(config["input_dir_mouse"])
     input_files = zip(human_input, mouse_input)
 
     # make the stage repository
