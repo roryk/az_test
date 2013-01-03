@@ -25,6 +25,7 @@ class TestDisambiguate(unittest.TestCase):
 
         """
         stage_runner = self.repository[STAGENAME]
+        print self.repository.plugins
         self.assertTrue(issubclass(stage_runner, AbstractStage))
 
     def test_out_file(self):
@@ -44,6 +45,10 @@ class TestDisambiguate(unittest.TestCase):
         test that running disambiguate works properly
 
         """
+        stage = self.repository[STAGENAME]
+        stage_runner = stage(self.config)
+        out_files = stage_runner(self.input_file)
+        print out_files
         self.assertTrue(False)
 
 if __name__ == "__main__":

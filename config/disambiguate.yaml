@@ -7,18 +7,16 @@ cluster:
   delay: 20 # the delay in spinning up engines once the controller is up
 
 dir:
-  results: results # results will go in this directory
+  results: results/disambiguate # results will go in this directory
   doc: doc # documentation for this analysis goes here
   ref: ref # reference files
   data: data # raw data goes here. make everything read only for safety
   meta: meta # metadata (annotation, etc) goes here
 
-test_pipeline: False
-
 log_dir: log
 
-input_dir_human: results/human_mapping
-input_dir_mouse: results/mouse_mapping
+input_dir_human: results/human_mapping/tophat
+input_dir_mouse: results/mouse_mapping/tophat
 
 # configuration options for each stage of the analysis
 stage:

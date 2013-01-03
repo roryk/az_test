@@ -8,7 +8,7 @@ dir:
   meta: meta # metadata (annotation, etc) goes here
   plugins: /Users/rory/cache/az/plugins
 
-input: [../data/small_1.human.sam, ../data/small_1.mouse.sam]
+input: [test/data/small_1.human.sam, test/data/small_1.mouse.sam]
 
 program:
   fastqc: fastqc
