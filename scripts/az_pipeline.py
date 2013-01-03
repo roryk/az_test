@@ -20,6 +20,7 @@ from bipy.toolbox.trim import Cutadapt
 from bipy.toolbox.fastqc import FastQC
 from bipy.toolbox.fastq import HardClipper
 from bipy.toolbox.tophat import Tophat
+from bipy.toolbox.rseqc import RNASeqMetrics
 from bipy.plugins import StageRepository
 
 import glob
@@ -122,7 +123,8 @@ def main(config_file):
 
         if stage == "tophat":
             logger.info("Running Tophat on %s." % (curr_files))
-            tophat = repository["tophat"](config)
+            #tophat = repository["tophat"](config)
+            tophat = Tophat(config)
             tophat_outputs = view.map(tophat, curr_files)
             bamfiles = view.map(sam.sam2bam, tophat_outputs)
             bamsort = view.map(sam.bamsort, bamfiles)
@@ -141,26 +143,14 @@ def main(config_file):
             htseq_outputs = view.map(htseq_count.run_with_config,
                                      *htseq_args)
 
-        if stage == "coverage":
+        if stage == "rnaseq_metrics":
             logger.info("Calculating RNASeq metrics on %s." % (curr_files))
-            nrun = len(curr_files)
-            ref = prepare_ref_file(config["stage"][stage]["ref"], config)
-            ribo = config["stage"][stage]["ribo"]
-            picard = BroadRunner(config["program"]["picard"])
-            out_dir = os.path.join(results_dir, stage)
-            safe_makedir(out_dir)
-            out_files = [replace_suffix(os.path.basename(x),
-                                        "metrics") for x in curr_files]
-            out_files = [os.path.join(out_dir, x) for x in out_files]
-            out_files = view.map(picardrun.picard_rnaseq_metrics,
-                                 [picard] * nrun,
-                                 curr_files,
-                                 [ref] * nrun,
-                                 [ribo] * nrun,
-                                 out_files)
+            #coverage = repository[stage](config)
+            coverage = RNASeqMetrics(config)
+            view.map(coverage, curr_files)
 
         if stage == "rseqc":
-            _emit_stage_message(stage, curr_files)
+            logger.info("Running rseqc on %s." % (curr_files))
             rseq_args = zip(*product(curr_files, [config]))
             view.map(rseqc.bam_stat, *rseq_args)
             view.map(rseqc.genebody_coverage, *rseq_args)

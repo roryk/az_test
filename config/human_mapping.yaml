@@ -58,12 +58,12 @@ stage:
     max_errors: 2
     quality_format: sanger
 
-  coverage:
-    name: coverage
+  rnaseq_metrics:
+    name: rnaseq_metrics
     program: picard
     ref:
       name: human
-      file: /n/hsphS10/hsphfs1/chb/biodata/genomes/Hsapiens/hg19/iGenomes/Homo_sapiens/Ensembl/GRCh37/Annotation/Genes/genes.gtf
+      file: /n/hsphS10/hsphfs1/chb/biodata/genomes/Hsapiens/hg19/iGenomes/Homo_sapiens/Ensembl/GRCh37/Annotation/Genes/refFlat.txt
     ribo: meta/human_rrna.bed
 
   rseqc:
@@ -71,4 +71,4 @@ stage:
 
 # order to run the stages in
 run:
-  [fastqc, cutadapt, fastqc, tophat, coverage, rseqc]
+  [fastqc, cutadapt, fastqc, tophat, rnaseq_metrics, rseqc]

@@ -77,8 +77,8 @@ stage:
       - [--idattr=gene_id]
       - [--mode=union]
 
-  coverage:
-    name: coverage
+  rnaseq_metrics:
+    name: rnaseq_metrics
     program: picard
     ref:
       name: mouse
@@ -94,4 +94,4 @@ stage:
 
 # order to run the stages in
 run:
-  [fastqc, cutadapt, fastqc, tophat_mouse, tophat_human, disambiguate, coverage, rseqc, htseq-count]
+  [fastqc, cutadapt, fastqc, tophat_mouse, tophat_human, disambiguate, rnaseq_metrics, rseqc, htseq-count]

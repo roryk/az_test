@@ -77,12 +77,12 @@ stage:
       - [--idattr=gene_id]
       - [--mode=union]
 
-  coverage:
-    name: coverage
+  rnaseq_metrics:
+    name: rnaseq_metrics
     program: picard
     ref:
       name: mouse
-      file: /n/hsphS10/hsphfs1/chb/biodata/genomes/Mmusculus/mm9/iGenomes/Ensembl/NCBIM37/Annotation/Genes/refFlat.txt
+      file: /n/hsphS10/hsphfs1/chb/biodata/genomes/Hsapiens/hg19/iGenomes/Homo_sapiens/Ensembl/GRCh37/Annotation/Genes/refFlat.txt
     ribo: meta/mouse_rrna.bed
 
   deseq:
@@ -94,4 +94,4 @@ stage:
 
 # order to run the stages in
 run:
-  [fastqc, cutadapt, fastqc, tophat_mouse, tophat_human, disambiguate, coverage, rseqc, htseq-count]
+  [fastqc, cutadapt, fastqc, tophat_mouse, tophat_human, disambiguate, rnaseq_metrics, rseqc, htseq-count]
