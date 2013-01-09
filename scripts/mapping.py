@@ -142,6 +142,7 @@ def main(config_file):
             htseq_args = zip(*product(curr_files, [config], [stage]))
             htseq_outputs = view.map(htseq_count.run_with_config,
                                      *htseq_args)
+            htseq.combine_counts(htseq_outputs)
 
         if stage == "rnaseq_metrics":
             logger.info("Calculating RNASeq metrics on %s." % (curr_files))
@@ -151,7 +152,8 @@ def main(config_file):
 
         if stage == "rseqc":
             logger.info("Running rseqc on %s." % (curr_files))
-            rseq_args = zip(*product(curr_files, [config]))
+            #rseq_args = zip(*product(curr_files, [config]))
+            rseq_args = zip(*product(final_bamfiles, [config]))
             view.map(rseqc.bam_stat, *rseq_args)
             view.map(rseqc.genebody_coverage, *rseq_args)
             view.map(rseqc.junction_annotation, *rseq_args)

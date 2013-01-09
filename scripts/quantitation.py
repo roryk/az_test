@@ -63,6 +63,7 @@ def main(config_file):
             htseq_args = zip(*product(curr_files, [config], [stage]))
             htseq_outputs = view.map(htseq_count.run_with_config,
                                      *htseq_args)
+            htseq_count.combine_counts(htseq_outputs)
 
         if stage == "rnaseq_metrics":
             logger.info("Calculating RNASeq metrics on %s." % (curr_files))
