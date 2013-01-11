@@ -8,6 +8,9 @@ from bipy.utils import flatten
 from bcbio.utils import safe_makedir, file_exists
 import os
 import sh
+from itertools import groupby, starmap
+from bipy.log import logger
+import shutil
 
 
 class Disambiguate(AbstractStage):
@@ -47,10 +50,42 @@ class Disambiguate(AbstractStage):
     def out_file(self, in_tuple):
         """
         returns the set of output filenames that will be made from
+        running this stage on a set of input files
+        """
+        return map(self._disambiguate_to_bipy,
+                   self._disambiguate_out(in_tuple))
+
+    def _disambiguate_out(self, in_tuple):
+        """
+        returns the set of output filenames that will be made from
         running disambiguate on the tuple of input files
         """
         return list(flatten(map(self._organism_files,
                                 in_tuple, self.organisms)))
+
+    def _disambiguate_to_bipy(self, in_file):
+        """
+        convert the filenames into something easier to work with
+        """
+        base = os.path.basename(in_file)
+        if "Human" in base:
+            out_dir = os.path.join(self.config["dir"].get("results",
+                                                          "results"),
+                                   "human", self.stage)
+            safe_makedir(out_dir)
+            out_file = str.replace(base, "Human", ".human")
+            return os.path.join(out_dir, out_file)
+        elif "Mouse" in base:
+            out_dir = os.path.join(self.config["dir"].get("results",
+                                                          "results"),
+                                   "mouse", self.stage)
+            safe_makedir(out_dir)
+            out_file = str.replace(base, "Mouse", ".mouse")
+            return os.path.join(out_dir, out_file)
+        else:
+            logger.error("Could not find Human or Mouse in the filenames, "
+                         "aborting.")
+            exit(1)
 
     def _organism_files(self, in_file, organism):
         base, _ = os.path.splitext(os.path.basename(in_file))
@@ -76,5 +111,7 @@ class Disambiguate(AbstractStage):
         self._start_message(in_files)
         # first is human, second is mouse
         out_files = self._disambiguate(in_files[0], in_files[1])
+        dis_files = self._disambiguate_out(in_files)
+        [shutil.move(x[0], x[1]) for x in zip(dis_files, out_files)]
         self._end_message(in_files)
         return out_files
