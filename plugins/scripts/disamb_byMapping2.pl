@@ -1,4 +1,4 @@
-#!/usr/bin/perl 
+#!/usr/local/bin/perl
 
 # To compare to SAM files from explant sequencing
 # keep singletons
@@ -12,7 +12,8 @@ my $out_dir = shift;   #output directory for 4 sam files
 
 system("mkdir $out_dir");
 
-$sam1 =~ /(.*)\.human.sam/;
+@sam1 = split(/\//, $sam1);
+$sam1[-1] =~ /(.*)\.human.sam/;
 my $name = $1;    #sample name
 
 #output sam files:
@@ -155,7 +156,7 @@ foreach my $key (keys %pair) {
 
     else {
 	my @score = sort {$a->[0] <=> $b->[0] } ([$h1,"human"], [$h2, "human"], [$m1, "mouse"], [$m2, "mouse"]);
-	
+
 	if ($score[0]->[1] eq $score[1]->[1]) {       #top 2 are from same species
 
 	    if ($score[0]->[1] eq "human") {
@@ -166,7 +167,7 @@ foreach my $key (keys %pair) {
 	    }
 	}
 
-	else {                                       #top 2 are from different species 
+	else {                                       #top 2 are from different species
 	    if ($score[0]->[0] < $score[1]->[0]) {   #disambiguation by first 2 reads
 		if ($score[0]->[1] eq "human") {
 		    $human{$key} = $key;
@@ -227,6 +228,3 @@ foreach my $key (keys %pair) {
 	}
     }
 }
-    
-	
-	
