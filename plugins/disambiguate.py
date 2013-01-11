@@ -17,8 +17,8 @@ class Disambiguate(AbstractStage):
     genomes and an output directory and disambiguates the reads mapping to
     each genome.
 
-    requires disamb_byMapping2.pl to either be in your path or a program
-    that does a similar task to be specified in this section of the YAML file:
+    requires disamb_byMapping2.pl or something that does a similar task to
+    be specified in this section of the YAML file:
 
     stage:
         disambiguate:
@@ -54,24 +54,27 @@ class Disambiguate(AbstractStage):
 
     def _organism_files(self, in_file, organism):
         base, _ = os.path.splitext(os.path.basename(in_file))
-        disamb = base + ".disambiguous" + organism + ".sam"
-        ambig = base + ".ambiguous" + organism + ".sam"
+        # remove organism name
+        sample_name, _ = os.path.splitext(base)
+        disamb = sample_name + ".disambiguous" + organism + ".sam"
+        ambig = sample_name + ".ambiguous" + organism + ".sam"
         return [os.path.join(self.out_dir, x) for x in
                 (disamb, ambig)]
 
     def _disambiguate(self, org1_sam, org2_sam):
-        run_disambiguate = sh.Command(self.program)
+        run_disambiguate = sh.Command("perl")
         out_files = self.out_file((org1_sam, org2_sam))
         # if files exist already and are non-zero, skip this step
         if all(map(file_exists, out_files)):
             return out_files
 
         # disambiguate and return the output filenames
-        run_disambiguate(org1_sam, org2_sam, self.out_dir)
+        run_disambiguate(self.program, org1_sam, org2_sam, self.out_dir)
         return out_files
 
     def __call__(self, in_files):
         self._start_message(in_files)
         # first is human, second is mouse
-        self._disambiguate(in_files[0], in_files[1])
+        out_files = self._disambiguate(in_files[0], in_files[1])
         self._end_message(in_files)
+        return out_files
