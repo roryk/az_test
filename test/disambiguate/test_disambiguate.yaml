@@ -1,7 +1,7 @@
 # configuration file for testing the disambiguate script
 
 dir:
-  results: results/test/disambiguate # results will go in this directory
+  results: results/test # results will go in this directory
   doc: doc # documentation for this analysis goes here
   ref: ref # reference files
   data: data # raw data goes here. make everything read only for safety
