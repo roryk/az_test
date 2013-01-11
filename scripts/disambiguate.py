@@ -48,6 +48,7 @@ def find_sam_files(in_dir):
     logger.info("Found %s." % (links))
     return links
 
+
 def find_bam_files(in_dir):
     logger.info("Finding BAM files in %s." % (in_dir))
     files = list(locate("*.sorted.bam", in_dir))
@@ -63,10 +64,10 @@ def main(config_file):
     map(safe_makedir, config["dir"].values())
 
     # specific for project
-    #human_input = find_sam_files(config["input_dir_human"])
-    #mouse_input = find_sam_files(config["input_dir_mouse"])
-    human_input = find_bam_files(config["input_dir_human"])
-    mouse_input = find_bam_files(config["input_dir_mouse"])
+    human_input = find_sam_files(config["input_dir_human"])
+    mouse_input = find_sam_files(config["input_dir_mouse"])
+    #human_input = find_bam_files(config["input_dir_human"])
+    #mouse_input = find_bam_files(config["input_dir_mouse"])
     input_files = zip(human_input, mouse_input)
 
     # make the stage repository
@@ -81,10 +82,10 @@ def main(config_file):
         # for now use my hack version
         if stage == "disambiguate":
             logger.info("Disambiguating %s." % (curr_files))
-            disambiguate = Disambiguate(config)
-            view.map(disambiguate, curr_files)
-            #disambiguate = repository[stage](config)
+            #disambiguate = Disambiguate(config)
             #view.map(disambiguate, curr_files)
+            disambiguate = repository[stage](config)
+            view.map(disambiguate, curr_files)
 
     # end gracefully
     stop_cluster()
