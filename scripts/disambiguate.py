@@ -18,9 +18,9 @@ from bipy.toolbox.trim import Cutadapt
 from bipy.toolbox.fastqc import FastQC
 from bipy.toolbox.tophat import Tophat
 from bipy.toolbox.rseqc import RNASeqMetrics
-from bipy.toolbox.sam import Disambiguate
 from bipy.plugins import StageRepository
 from bcbio.utils import safe_makedir
+from az.plugins import Disambiguate
 
 from itertools import product,  islice
 import sh
@@ -82,10 +82,11 @@ def main(config_file):
         # for now use my hack version
         if stage == "disambiguate":
             logger.info("Disambiguating %s." % (curr_files))
-            #disambiguate = Disambiguate(config)
+            disambiguate = Disambiguate(config)
+            out_files = view.map(disambiguate, curr_files)
             #view.map(disambiguate, curr_files)
-            disambiguate = repository[stage](config)
-            view.map(disambiguate, curr_files)
+            #disambiguate = repository[stage](config)
+            #view.map(disambiguate, curr_files)
 
     # end gracefully
     stop_cluster()
