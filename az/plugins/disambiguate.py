@@ -90,7 +90,8 @@ class Disambiguate(AbstractStage):
     def _organism_files(self, in_file, organism):
         base, _ = os.path.splitext(os.path.basename(in_file))
         # remove organism name
-        sample_name, _ = os.path.splitext(base)
+        #sample_name, _ = os.path.splitext(base)
+        sample_name = base
         disamb = sample_name + ".disambiguous" + organism + ".sam"
         ambig = sample_name + ".ambiguous" + organism + ".sam"
         return [os.path.join(self.out_dir, x) for x in
