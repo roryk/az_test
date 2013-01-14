@@ -21,7 +21,7 @@ input_dir_mouse: results/mouse_mapping/tophat
 # configuration options for each stage of the analysis
 stage:
   disambiguate:
-    program: plugins/scripts/disamb_byMapping2.pl
+    program: scripts/disamb_byMapping2.pl
 
 # order to run the stages in
 run:

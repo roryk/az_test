@@ -20,7 +20,7 @@ from bipy.toolbox.tophat import Tophat
 from bipy.toolbox.rseqc import RNASeqMetrics
 from bipy.plugins import StageRepository
 from bcbio.utils import safe_makedir
-from az.plugins import Disambiguate
+from az.plugins.disambiguate import Disambiguate
 
 from itertools import product,  islice
 import sh
