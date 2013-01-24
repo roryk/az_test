@@ -19,7 +19,7 @@ log_dir: log
 
 input_dir: test/data
 
-ref: /n/hsphS10/hsphfs1/chb/biodata/genomes/Mmusculus/mm9/iGenomes/Ensembl/NCBIM37/Sequence/BowtieIndex/genome
+ref: /n/hsphS10/hsphfs1/chb/biodata/genomes/Mmusculus/mm9/iGenomes/Ensembl/NCBIM37/Sequence/Bowtie2Index/genome
 gtf: /n/hsphS10/hsphfs1/chb/biodata/genomes/Mmusculus/mm9/iGenomes/Ensembl/NCBIM37/Annotation/Genes/genes.gtf
 
 
@@ -32,8 +32,8 @@ annotation:
 # the jar file is kept
 program:
   fastqc: fastqc
-  tophat: tophat
-  bowtie: bowtie
+  tophat: tophat2
+  bowtie: bowtie2
   picard: /n/HSPH/local/share/java/picard-1.79/
 
 # configuration options for each stage of the analysis
@@ -55,10 +55,11 @@ stage:
 
   tophat:
     name: tophat
-    program: tophat
-    max_errors: 2
+    program: tophat2
+    options:
+        b2-sensitive: True
     quality_format: sanger
-    ref: /n/hsphS10/hsphfs1/chb/biodata/genomes/Mmusculus/mm9/iGenomes/Ensembl/NCBIM37/Sequence/BowtieIndex/genome
+    ref: /n/hsphS10/hsphfs1/chb/biodata/genomes/Mmusculus/mm9/iGenomes/Ensembl/NCBIM37/Sequence/Bowtie2Index/genome
     gtf: /n/hsphS10/hsphfs1/chb/biodata/genomes/Mmusculus/mm9/iGenomes/Ensembl/NCBIM37/Annotation/Genes/genes.gtf
 
   rnaseq_metrics:

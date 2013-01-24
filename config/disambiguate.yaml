@@ -7,7 +7,7 @@ cluster:
   delay: 20 # the delay in spinning up engines once the controller is up
 
 dir:
-  results: results/disambiguate # results will go in this directory
+  results: results # results will go in this directory
   doc: doc # documentation for this analysis goes here
   ref: ref # reference files
   data: data # raw data goes here. make everything read only for safety

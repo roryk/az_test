@@ -83,7 +83,10 @@ def main(config_file):
         if stage == "disambiguate":
             logger.info("Disambiguating %s." % (curr_files))
             disambiguate = Disambiguate(config)
-            out_files = view.map(disambiguate, curr_files)
+            out_files = list(flatten(view.map(disambiguate, curr_files)))
+            bam_files = view.map(sam.sam2bam, out_files)
+            bam_sorted = view.map(sam.bamsort, bam_files)
+            view.map(sam.bamindex, bam_sorted)
             #view.map(disambiguate, curr_files)
             #disambiguate = repository[stage](config)
             #view.map(disambiguate, curr_files)

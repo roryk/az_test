@@ -71,14 +71,14 @@ class Disambiguate(AbstractStage):
         if "Human" in base:
             out_dir = os.path.join(self.config["dir"].get("results",
                                                           "results"),
-                                   "human", self.stage)
+                                   "human_mapping", self.stage)
             safe_makedir(out_dir)
             out_file = str.replace(base, "Human", ".human")
             return os.path.join(out_dir, out_file)
         elif "Mouse" in base:
             out_dir = os.path.join(self.config["dir"].get("results",
                                                           "results"),
-                                   "mouse", self.stage)
+                                   "mouse_mapping", self.stage)
             safe_makedir(out_dir)
             out_file = str.replace(base, "Mouse", ".mouse")
             return os.path.join(out_dir, out_file)
@@ -113,6 +113,8 @@ class Disambiguate(AbstractStage):
         # first is human, second is mouse
         out_files = self._disambiguate(in_files[0], in_files[1])
         dis_files = self._disambiguate_out(in_files)
-        [shutil.move(x[0], x[1]) for x in zip(dis_files, out_files)]
+        if all(map(file_exists, dis_files)):
+            [shutil.move(x[0], x[1]) for x in zip(dis_files, out_files)]
+        shutil.rmtree(self.out_dir)
         self._end_message(in_files)
         return out_files

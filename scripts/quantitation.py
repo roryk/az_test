@@ -41,7 +41,7 @@ def main(config_file):
     # specific for project
     input_dir = config["input_dir"]
     logger.info("Loading files from %s" % (input_dir))
-    input_files = list(locate("*.unique.bam", input_dir))
+    input_files = list(locate("*.disambiguous*.sorted.bam", input_dir))
     logger.info("Input files: %s" % (input_files))
 
     results_dir = config["dir"]["results"]
