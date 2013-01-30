@@ -1,7 +1,7 @@
 # example configuration file for rna-seq analysis
 cluster:
   name: odyssey # arbitrary name
-  profile: lsf2 # ipython profile to run under
+  profile: lsf4 # ipython profile to run under
   cores: 2 # number of ipython engines to spin up
   timeout: 10000 # time to wait for the cluster to be up before failing
   delay: 20 # the delay in spinning up engines once the controller is up
@@ -49,6 +49,7 @@ stage:
     program: cutadapt
     chemistry: [truseq]
     trim_polya: True
+    quality_format: sanger
     options:
       error-rate: 0.1
       quality-cutoff: 20

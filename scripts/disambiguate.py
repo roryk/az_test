@@ -18,7 +18,6 @@ from bipy.toolbox.trim import Cutadapt
 from bipy.toolbox.fastqc import FastQC
 from bipy.toolbox.tophat import Tophat
 from bipy.toolbox.rseqc import RNASeqMetrics
-from bipy.plugins import StageRepository
 from bcbio.utils import safe_makedir
 from az.plugins.disambiguate import Disambiguate
 
@@ -66,8 +65,6 @@ def main(config_file):
     # specific for project
     human_input = find_sam_files(config["input_dir_human"])
     mouse_input = find_sam_files(config["input_dir_mouse"])
-    #human_input = find_bam_files(config["input_dir_human"])
-    #mouse_input = find_bam_files(config["input_dir_mouse"])
     input_files = zip(human_input, mouse_input)
 
     # make the stage repository
@@ -79,7 +76,6 @@ def main(config_file):
     logger.info("Running disambiguation pipeline on %s." % (curr_files))
 
     for stage in config["run"]:
-        # for now use my hack version
         if stage == "disambiguate":
             logger.info("Disambiguating %s." % (curr_files))
             disambiguate = Disambiguate(config)
@@ -87,9 +83,6 @@ def main(config_file):
             bam_files = view.map(sam.sam2bam, out_files)
             bam_sorted = view.map(sam.bamsort, bam_files)
             view.map(sam.bamindex, bam_sorted)
-            #view.map(disambiguate, curr_files)
-            #disambiguate = repository[stage](config)
-            #view.map(disambiguate, curr_files)
 
     # end gracefully
     stop_cluster()

@@ -21,7 +21,7 @@ from bipy.toolbox.fastqc import FastQC
 from bipy.toolbox.fastq import HardClipper
 from bipy.toolbox.tophat import Tophat
 from bipy.toolbox.rseqc import RNASeqMetrics
-from bipy.plugins import StageRepository
+from az.plugins.disambiguate import Disambiguate
 
 import glob
 from itertools import product, repeat, islice
@@ -34,17 +34,6 @@ def locate(pattern, root=os.curdir):
     for path, dirs, files in os.walk(os.path.abspath(root)):
         for filename in fnmatch.filter(files, pattern):
             yield os.path.join(path, filename)
-
-def find_files(in_dir):
-    """
-    returns a list of the sequence files in a directory recursively
-
-    """
-
-    FASTQ_EXTENSIONS = [".fq", ".fastq"]
-    files = [sh.find(in_dir, "-name", "*" + x) for x in FASTQ_EXTENSIONS]
-    return files
-
 
 def make_test(in_file, config, lines=1000000):
     """
@@ -65,18 +54,6 @@ def make_test(in_file, config, lines=1000000):
     return out_file
 
 
-def _get_stage_config(config, stage):
-    return config["stage"][stage]
-
-
-def _get_program(config, stage):
-    return config["stage"][stage]["program"]
-
-
-def _emit_stage_message(stage, curr_files):
-    logger.info("Running %s on %s" % (stage, curr_files))
-
-
 def main(config_file):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
@@ -93,10 +70,6 @@ def main(config_file):
 
     results_dir = config["dir"]["results"]
     safe_makedir(results_dir)
-
-    # make the stage repository
-    repository = StageRepository(config)
-    logger.info("Stages found: %s" % (repository.plugins))
 
     if config.get("test_pipeline", False):
         logger.info("Running a test pipeline on a subset of the reads.")
@@ -123,7 +96,6 @@ def main(config_file):
 
         if stage == "tophat":
             logger.info("Running Tophat on %s." % (curr_files))
-            #tophat = repository["tophat"](config)
             tophat = Tophat(config)
             tophat_outputs = view.map(tophat, curr_files)
             bamfiles = view.map(sam.sam2bam, tophat_outputs)
@@ -134,7 +106,7 @@ def main(config_file):
 
         if stage == "disambiguate":
             logger.info("Disambiguating %s." % (curr_files))
-            disambiguate = repository[stage](config)
+            disambiguate = Disambiguate(config)
             view.map(disambiguate, curr_files)
 
         if stage == "htseq-count":
@@ -146,7 +118,6 @@ def main(config_file):
 
         if stage == "rnaseq_metrics":
             logger.info("Calculating RNASeq metrics on %s." % (curr_files))
-            #coverage = repository[stage](config)
             coverage = RNASeqMetrics(config)
             view.map(coverage, curr_files)
 
