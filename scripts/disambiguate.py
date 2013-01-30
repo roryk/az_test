@@ -67,10 +67,6 @@ def main(config_file):
     mouse_input = find_sam_files(config["input_dir_mouse"])
     input_files = zip(human_input, mouse_input)
 
-    # make the stage repository
-    repository = StageRepository(config)
-    logger.info("Stages found: %s" % (repository.plugins))
-
     curr_files = input_files
 
     logger.info("Running disambiguation pipeline on %s." % (curr_files))
