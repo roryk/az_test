@@ -4,7 +4,6 @@ import os
 import argparse
 import time
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='run the AZ mapping '
                                      'pipeline with disambigutation')
@@ -35,8 +34,6 @@ if __name__ == "__main__":
         print "One of the mapping scripts did not complete properly. Exiting."
         sys.exit(1)
 
-    time.sleep(60)
-
     procs = []
     disambiguation_script_path = os.path.join(this_path, "disambiguate.py")
     disambiguation_path = os.path.abspath(args.disambiguate)
@@ -48,8 +45,6 @@ if __name__ == "__main__":
     if not all([c == 0 for c in codes]):
         print "The disambiguation script did not complete properly. Exiting."
         sys.exit(1)
-
-    time.sleep(60)
 
     procs = []
     quantitation_script_path = os.path.join(this_path, "quantitation.py")

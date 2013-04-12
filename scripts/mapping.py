@@ -99,7 +99,9 @@ def main(config_file, view):
             logger.info("Running Tophat on %s." % (curr_files))
             tophat = Tophat(config)
             tophat_outputs = view.map(tophat, curr_files)
-            bamfiles = view.map(sam.sam2bam, tophat_outputs)
+            sortsam = view.map(sam.coordinate_sort_sam, tophat_outputs,
+                               [config] * len(tophat_outputs))
+            bamfiles = view.map(sam.sam2bam, sortsam)
             bamsort = view.map(sam.bamsort, bamfiles)
             view.map(sam.bamindex, bamsort)
             final_bamfiles = bamsort
@@ -115,7 +117,7 @@ def main(config_file, view):
             htseq_args = zip(*product(curr_files, [config], [stage]))
             htseq_outputs = view.map(htseq_count.run_with_config,
                                      *htseq_args)
-            htseq.combine_counts(htseq_outputs)
+            htseq_combine_counts(htseq_outputs)
 
         if stage == "rnaseq_metrics":
             logger.info("Calculating RNASeq metrics on %s." % (curr_files))

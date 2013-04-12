@@ -97,4 +97,3 @@ if __name__ == "__main__":
                       cluster_config["queue"],
                       cluster_config["cores"]) as view:
         main(main_config_file, view)
-    main(main_config_file)
