@@ -1,10 +1,12 @@
 # example configuration file for rna-seq analysis
 cluster:
   name: odyssey # arbitrary name
-  profile: lsf # ipython profile to run under
+#  profile: lsf # ipython profile to run under
   cores: 2 # number of ipython engines to spin up
   timeout: 10000 # time to wait for the cluster to be up before failing
   delay: 20 # the delay in spinning up engines once the controller is up
+  scheduler: lsf
+  queue: hsph
 
 dir:
   results: results/mouse_mapping/disambiguate # results will go in this directory

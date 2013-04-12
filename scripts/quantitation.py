@@ -18,6 +18,7 @@ from bipy.toolbox import (htseq_count, deseq, annotate, rseqc, sam)
 from bcbio.broad import BroadRunner, picardrun
 from bipy.toolbox.rseqc import RNASeqMetrics
 from bipy.plugins import StageRepository
+from cluster_helper.cluster import cluster_view
 
 import glob
 from itertools import product, repeat, islice
@@ -31,7 +32,7 @@ def locate(pattern, root=os.curdir):
         for filename in fnmatch.filter(files, pattern):
             yield os.path.join(path, filename)
 
-def main(config_file):
+def main(config_file, view):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
 
@@ -103,6 +104,9 @@ if __name__ == "__main__":
     with open(main_config_file) as config_in_handle:
         startup_config = yaml.load(config_in_handle)
     setup_logging(startup_config)
-    start_cluster(startup_config)
-    from bipy.cluster import view
-    main(main_config_file)
+    cluster_config = startup_config["cluster"]
+    with cluster_view(cluster_config["scheduler"],
+                      cluster_config["queue"],
+                      cluster_config["cores"]) as view:
+        main(main_config_file, view)
+    main(main_config_file, view)

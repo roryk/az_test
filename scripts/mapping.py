@@ -22,6 +22,7 @@ from bipy.toolbox.fastq import HardClipper
 from bipy.toolbox.tophat import Tophat
 from bipy.toolbox.rseqc import RNASeqMetrics
 from az.plugins.disambiguate import Disambiguate
+from cluster_helper.cluster import cluster_view
 
 import glob
 from itertools import product, repeat, islice
@@ -54,7 +55,7 @@ def make_test(in_file, config, lines=1000000):
     return out_file
 
 
-def main(config_file):
+def main(config_file, view):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
 
@@ -154,6 +155,8 @@ if __name__ == "__main__":
     with open(main_config_file) as config_in_handle:
         startup_config = yaml.load(config_in_handle)
     setup_logging(startup_config)
-    start_cluster(startup_config)
-    from bipy.cluster import view
-    main(main_config_file)
+    cluster_config = startup_config["cluster"]
+    with cluster_view(cluster_config["scheduler"],
+                      cluster_config["queue"],
+                      cluster_config["cores"]) as view:
+        main(main_config_file, view)
