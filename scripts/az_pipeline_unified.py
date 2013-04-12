@@ -2,6 +2,7 @@ import sys
 import subprocess
 import os
 import argparse
+import time
 
 
 if __name__ == "__main__":
@@ -34,8 +35,10 @@ if __name__ == "__main__":
         print "One of the mapping scripts did not complete properly. Exiting."
         sys.exit(1)
 
+    time.sleep(60)
+
     procs = []
-    disambiguation_script_path = os.path.join(this_path, "disambiguation.py")
+    disambiguation_script_path = os.path.join(this_path, "disambiguate.py")
     disambiguation_path = os.path.abspath(args.disambiguate)
     disambiguation_cmd = ["python", disambiguation_script_path,
                           disambiguation_path]
@@ -46,13 +49,15 @@ if __name__ == "__main__":
         print "The disambiguation script did not complete properly. Exiting."
         sys.exit(1)
 
+    time.sleep(60)
+
     procs = []
     quantitation_script_path = os.path.join(this_path, "quantitation.py")
     mouse_quantitation_path = os.path.abspath(args.mouse_quantitation)
     human_quantitation_path = os.path.abspath(args.human_quantitation)
     mouse_quantitation_cmd = ["python", quantitation_script_path, mouse_quantitation_path]
     human_quantitation_cmd = ["python", quantitation_script_path, human_quantitation_path]
-    for cmd in [mouse_mapping_cmd, human_mapping_cmd]:
+    for cmd in [mouse_quantitation_cmd, human_quantitation_cmd]:
         procs.append(subprocess.Popen(cmd))
     codes = [p.wait() for p in procs]
     if not all([c == 0 for c in codes]):
