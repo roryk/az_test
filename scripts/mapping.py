@@ -7,7 +7,7 @@ you will have to write a couple of functions to group the input
 data in useful ways
 
 """
-from bipy.cluster import start_cluster, stop_cluster
+from cluster_helper.cluster import cluster_view
 import sys
 import yaml
 from bipy.log import setup_logging, logger
@@ -21,8 +21,7 @@ from bipy.toolbox.fastqc import FastQC
 from bipy.toolbox.fastq import HardClipper
 from bipy.toolbox.tophat import Tophat
 from bipy.toolbox.rseqc import RNASeqMetrics
-from az.plugins.disambiguate import Disambiguate
-from cluster_helper.cluster import cluster_view
+from bipy.plugins import StageRepository
 
 import glob
 from itertools import product, repeat, islice
@@ -35,6 +34,7 @@ def locate(pattern, root=os.curdir):
     for path, dirs, files in os.walk(os.path.abspath(root)):
         for filename in fnmatch.filter(files, pattern):
             yield os.path.join(path, filename)
+
 
 def make_test(in_file, config, lines=1000000):
     """
@@ -55,6 +55,18 @@ def make_test(in_file, config, lines=1000000):
     return out_file
 
 
+def _get_stage_config(config, stage):
+    return config["stage"][stage]
+
+
+def _get_program(config, stage):
+    return config["stage"][stage]["program"]
+
+
+def _emit_stage_message(stage, curr_files):
+    logger.info("Running %s on %s" % (stage, curr_files))
+
+
 def main(config_file, view):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
@@ -63,7 +75,7 @@ def main(config_file, view):
     map(safe_makedir, config["dir"].values())
 
     # specific for project
-    input_dir = config["input_dir"]
+    input_dir = config["dir"]["data"]
     logger.info("Loading files from %s" % (input_dir))
     input_files = list(locate("*.fq", input_dir))
     input_files += list(locate("*.fastq", input_dir))
@@ -71,6 +83,10 @@ def main(config_file, view):
 
     results_dir = config["dir"]["results"]
     safe_makedir(results_dir)
+
+    # make the stage repository
+    repository = StageRepository(config)
+    logger.info("Stages found: %s" % (repository.plugins))
 
     if config.get("test_pipeline", False):
         logger.info("Running a test pipeline on a subset of the reads.")
@@ -97,6 +113,7 @@ def main(config_file, view):
 
         if stage == "tophat":
             logger.info("Running Tophat on %s." % (curr_files))
+            #tophat = repository["tophat"](config)
             tophat = Tophat(config)
             tophat_outputs = view.map(tophat, curr_files)
             sortsam = view.map(sam.coordinate_sort_sam, tophat_outputs,
@@ -109,27 +126,38 @@ def main(config_file, view):
 
         if stage == "disambiguate":
             logger.info("Disambiguating %s." % (curr_files))
-            disambiguate = Disambiguate(config)
+            disambiguate = repository[stage](config)
             view.map(disambiguate, curr_files)
 
         if stage == "htseq-count":
-            logger.info("Running htseq-count on %s." % (curr_files))
+            logger.info("Running htseq-count on %s." % (bamfiles))
+            name_sorted = view.map(sam.bam_name_sort, bamfiles)
+            curr_files = view.map(sam.bam2sam, name_sorted)
             htseq_args = zip(*product(curr_files, [config], [stage]))
             htseq_outputs = view.map(htseq_count.run_with_config,
                                      *htseq_args)
-            htseq_combine_counts(htseq_outputs)
+            htseq_count.combine_counts(htseq_outputs)
 
         if stage == "rnaseq_metrics":
             logger.info("Calculating RNASeq metrics on %s." % (curr_files))
+            #coverage = repository[stage](config)
             coverage = RNASeqMetrics(config)
             view.map(coverage, curr_files)
+
+        if stage == "hard_clip":
+            logger.info("Trimming from the beginning of reads on %s." % (curr_files))
+            hard_clipper = HardClipper(config)
+            curr_files = view.map(hard_clipper, curr_files)
 
         if stage == "rseqc":
             logger.info("Running rseqc on %s." % (curr_files))
             #rseq_args = zip(*product(curr_files, [config]))
             rseq_args = zip(*product(final_bamfiles, [config]))
             view.map(rseqc.bam_stat, *rseq_args)
-            view.map(rseqc.genebody_coverage, *rseq_args)
+            down_args = zip(*product(final_bamfiles, [40000000]))
+            down_bam = view.map(sam.downsample_bam, *down_args)
+            view.map(rseqc.genebody_coverage, down_bam,
+                     [config] * len(down_bam))
             view.map(rseqc.junction_annotation, *rseq_args)
             view.map(rseqc.junction_saturation, *rseq_args)
             RPKM_args = zip(*product(final_bamfiles, [config]))
@@ -147,12 +175,7 @@ def main(config_file, view):
             view.map(rseqc.RPKM_saturation, *rseq_args)
             curr_files = tophat_outputs
 
-    # end gracefully
-    stop_cluster()
-
-
 if __name__ == "__main__":
-    # read in the config file and perform initial setup
     main_config_file = sys.argv[1]
     with open(main_config_file) as config_in_handle:
         startup_config = yaml.load(config_in_handle)

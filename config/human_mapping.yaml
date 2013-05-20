@@ -15,7 +15,7 @@ dir:
   data: test/data # raw data goes here. make everything read only for safety
   meta: meta # metadata (annotation, etc) goes here
 
-test_pipeline: True
+test_pipeline: False
 
 log_dir: log
 
