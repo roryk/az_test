@@ -12,14 +12,12 @@ dir:
   results: results/human_mapping # results will go in this directory
   doc: doc # documentation for this analysis goes here
   ref: ref # reference files
-  data: data # raw data goes here. make everything read only for safety
+  data: test/data # raw data goes here. make everything read only for safety
   meta: meta # metadata (annotation, etc) goes here
 
-test_pipeline: False
+test_pipeline: True
 
 log_dir: log
-
-input_dir: test/data
 
 ref: /n/hsphS10/hsphfs1/chb/biodata/genomes/Hsapiens/hg19/iGenomes/Homo_sapiens/Ensembl/GRCh37/Sequence/Bowtie2Index/genome
 gtf: /n/hsphS10/hsphfs1/chb/biodata/genomes/Hsapiens/hg19/iGenomes/Homo_sapiens/Ensembl/GRCh37/Annotation/Genes/genes.gtf
@@ -60,8 +58,6 @@ stage:
     options:
       b2-sensitive: True
     quality_format: sanger
-    ref: /n/hsphS10/hsphfs1/chb/biodata/genomes/Hsapiens/hg19/iGenomes/Homo_sapiens/Ensembl/GRCh37/Sequence/Bowtie2Index/genome
-    gtf: /n/hsphS10/hsphfs1/chb/biodata/genomes/Hsapiens/hg19/iGenomes/Homo_sapiens/Ensembl/GRCh37/Annotation/Genes/genes.gtf
 
   rnaseq_metrics:
     name: rnaseq_metrics

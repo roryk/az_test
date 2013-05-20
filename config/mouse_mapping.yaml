@@ -1,6 +1,5 @@
 # example configuration file for rna-seq analysis
 cluster:
-  name: odyssey # arbitrary name
 #  profile: lsf # ipython profile to run under
   cores: 4 # number of ipython engines to spin up
   timeout: 10000 # time to wait for the cluster to be up before failing
@@ -12,18 +11,15 @@ dir:
   results: results/mouse_mapping # results will go in this directory
   doc: doc # documentation for this analysis goes here
   ref: ref # reference files
-  data: data # raw data goes here. make everything read only for safety
+  data: test/data # raw data goes here. make everything read only for safety
   meta: meta # metadata (annotation, etc) goes here
 
-test_pipeline: False
+test_pipeline: True
 
 log_dir: log
 
-input_dir: test/data
-
 ref: /n/hsphS10/hsphfs1/chb/biodata/genomes/Mmusculus/mm9/iGenomes/Ensembl/NCBIM37/Sequence/Bowtie2Index/genome
 gtf: /n/hsphS10/hsphfs1/chb/biodata/genomes/Mmusculus/mm9/iGenomes/Ensembl/NCBIM37/Annotation/Genes/genes.gtf
-
 
 annotation:
   name: mm9
@@ -62,8 +58,6 @@ stage:
     options:
         b2-sensitive: True
     quality_format: sanger
-    ref: /n/hsphS10/hsphfs1/chb/biodata/genomes/Mmusculus/mm9/iGenomes/Ensembl/NCBIM37/Sequence/Bowtie2Index/genome
-    gtf: /n/hsphS10/hsphfs1/chb/biodata/genomes/Mmusculus/mm9/iGenomes/Ensembl/NCBIM37/Annotation/Genes/genes.gtf
 
   rnaseq_metrics:
     name: rnaseq_metrics
