@@ -7,7 +7,6 @@ you will have to write a couple of functions to group the input
 data in useful ways
 
 """
-from bipy.cluster import start_cluster, stop_cluster
 import sys
 import yaml
 from bipy.log import setup_logging, logger
@@ -45,6 +44,7 @@ def find_sam_files(in_dir):
     files = list(locate("*.sam", in_dir))
     logger.info("Found %s." % (files))
     links = filter(os.path.islink, files)
+    links.sort()
     logger.info("Found %s." % (links))
     return links
 
@@ -66,6 +66,11 @@ def main(config_file, view):
     # specific for project
     human_input = find_sam_files(config["input_dir_human"])
     mouse_input = find_sam_files(config["input_dir_mouse"])
+    if len(human_input) != len(mouse_input):
+        logger.error("The length of the number of human SAM files does "
+                     "not match the length of the number of mouse SAM "
+                     "files, aborting.")
+        sys.exit(1)
     input_files = zip(human_input, mouse_input)
 
     curr_files = input_files
@@ -81,10 +86,6 @@ def main(config_file, view):
             bam_sorted = view.map(sam.bamsort, bam_files)
             view.map(sam.bamindex, bam_sorted)
 
-    # end gracefully
-    stop_cluster()
-
-
 if __name__ == "__main__":
     # read in the config file and perform initial setup
     main_config_file = sys.argv[1]
@@ -93,7 +94,9 @@ if __name__ == "__main__":
     setup_logging(startup_config)
 
     cluster_config = startup_config["cluster"]
+    cores_per_job = cluster_config.get("cores_per_job", 1)
     with cluster_view(cluster_config["scheduler"],
                       cluster_config["queue"],
-                      cluster_config["cores"]) as view:
+                      cluster_config["cores"],
+                      cores_per_job) as view:
         main(main_config_file, view)
