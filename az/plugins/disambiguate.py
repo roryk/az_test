@@ -9,9 +9,10 @@ from bcbio.utils import safe_makedir, file_exists
 import os
 import sh
 from itertools import groupby, starmap
-from bipy.log import logger
+#from bipy.log import logger
 import shutil
-
+from bcbio.log import setup_local_logging, logger
+from bcbio.provenance.do import run
 
 class Disambiguate(AbstractStage):
     """
@@ -41,6 +42,7 @@ class Disambiguate(AbstractStage):
     def __init__(self, config):
         # abstract class does some simple initialization for us
         super(Disambiguate, self).__init__(config)
+        self.config = config
         self.stage_config = config["stage"][self.stage]
         self.out_dir = os.path.join(config["dir"].get("results", "results"),
                                     self.stage)
@@ -98,23 +100,25 @@ class Disambiguate(AbstractStage):
                 (disamb, ambig)]
 
     def _disambiguate(self, org1_sam, org2_sam):
-        run_disambiguate = sh.Command("perl")
+        #run_disambiguate = sh.Command("perl")
         out_files = self.out_file((org1_sam, org2_sam))
         # if files exist already and are non-zero, skip this step
         if all(map(file_exists, out_files)):
             return out_files
 
+        cmd = ["perl", self.program, org1_sam, org2_sam, self.out_dir]
         # disambiguate and return the output filenames
-        run_disambiguate(self.program, org1_sam, org2_sam, self.out_dir)
+        #run_disambiguate(self.program, org1_sam, org2_sam, self.out_dir)
+        run(cmd, "Disambiguation of %s and %s." % (org1_sam, org2_sam), None)
         return out_files
 
     def __call__(self, in_files):
+        setup_local_logging(self.config, self.config["parallel"])
         self._start_message(in_files)
         # first is human, second is mouse
         out_files = self._disambiguate(in_files[0], in_files[1])
         dis_files = self._disambiguate_out(in_files)
         if all(map(file_exists, dis_files)):
             [shutil.move(x[0], x[1]) for x in zip(dis_files, out_files)]
-        shutil.rmtree(self.out_dir)
         self._end_message(in_files)
         return out_files
