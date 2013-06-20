@@ -7,15 +7,14 @@ you will have to write a couple of functions to group the input
 data in useful ways
 
 """
-from cluster_helper.cluster import cluster_view
 import sys
 import yaml
-from bipy.log import setup_logging, logger
-from bcbio.utils import safe_makedir, file_exists
-from bipy.utils import (combine_pairs, flatten, append_stem,
-                        prepare_ref_file, replace_suffix)
-from bipy.toolbox import (htseq_count, deseq, annotate, rseqc, sam)
-from bcbio.broad import BroadRunner, picardrun
+from itertools import product, islice
+
+from cluster_helper.cluster import cluster_view
+from bcbio.utils import safe_makedir
+from bipy.utils import (combine_pairs, append_stem)
+from bipy.toolbox import (htseq_count, rseqc, sam)
 from bipy.toolbox.trim import Cutadapt
 from bipy.toolbox.fastqc import FastQC
 from bipy.toolbox.fastq import HardClipper
@@ -23,10 +22,8 @@ from bipy.toolbox.tophat import Tophat
 from bipy.toolbox.rseqc import RNASeqMetrics
 from bipy.plugins import StageRepository
 
-import glob
-from itertools import product, repeat, islice
-import sh
 import os, fnmatch
+from bcbio.log import create_base_logger, setup_local_logging, logger
 
 def locate(pattern, root=os.curdir):
     '''Locate all files matching supplied filename pattern in and below
@@ -67,9 +64,7 @@ def _emit_stage_message(stage, curr_files):
     logger.info("Running %s on %s" % (stage, curr_files))
 
 
-def main(config_file, view):
-    with open(config_file) as in_handle:
-        config = yaml.load(in_handle)
+def main(config, view):
 
     # make the needed directories
     map(safe_makedir, config["dir"].values())
@@ -151,19 +146,12 @@ def main(config_file, view):
 
         if stage == "rseqc":
             logger.info("Running rseqc on %s." % (curr_files))
-            #rseq_args = zip(*product(curr_files, [config]))
-            rseq_args = zip(*product(final_bamfiles, [config]))
+            rseq_args = zip(*product(curr_files, [config]))
             view.map(rseqc.bam_stat, *rseq_args)
-            down_args = zip(*product(final_bamfiles, [40000000]))
-            down_bam = view.map(sam.downsample_bam, *down_args)
-            view.map(rseqc.genebody_coverage, down_bam,
-                     [config] * len(down_bam))
+            view.map(rseqc.genebody_coverage, *rseq_args)
             view.map(rseqc.junction_annotation, *rseq_args)
-            view.map(rseqc.junction_saturation, *rseq_args)
-            RPKM_args = zip(*product(final_bamfiles, [config]))
-            RPKM_count_out = view.map(rseqc.RPKM_count, *RPKM_args)
-            RPKM_count_fixed = view.map(rseqc.fix_RPKM_count_file,
-                                        RPKM_count_out)
+            RPKM_count_out = view.map(rseqc.RPKM_count, *rseq_args)
+            view.map(rseqc.fix_RPKM_count_file, RPKM_count_out)
             """
                             annotate_args = zip(*product(RPKM_count_fixed,
                                          ["gene_id"],
@@ -172,18 +160,19 @@ def main(config_file, view):
             view.map(annotate.annotate_table_with_biomart,
                      *annotate_args)
                      """
-            view.map(rseqc.RPKM_saturation, *rseq_args)
-            curr_files = tophat_outputs
+                     #view.map(rseqc.RPKM_saturation, *rseq_args)
 
 if __name__ == "__main__":
     main_config_file = sys.argv[1]
     with open(main_config_file) as config_in_handle:
         startup_config = yaml.load(config_in_handle)
-    setup_logging(startup_config)
+    parallel = create_base_logger(startup_config, {"type": "ipython"})
+    setup_local_logging(startup_config, parallel)
+    startup_config["parallel"] = parallel
     cluster_config = startup_config["cluster"]
     cores_per_job = cluster_config.get("cores_per_job", 1)
     with cluster_view(cluster_config["scheduler"],
                       cluster_config["queue"],
                       cluster_config["cores"],
                       cores_per_job) as view:
-        main(main_config_file, view)
+        main(startup_config, view)
