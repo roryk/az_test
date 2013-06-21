@@ -146,10 +146,12 @@ def main(config, view):
 
         if stage == "rseqc":
             logger.info("Running rseqc on %s." % (curr_files))
+            curr_files = view.map(sam.sam2bam, curr_files)
             rseq_args = zip(*product(curr_files, [config]))
             view.map(rseqc.bam_stat, *rseq_args)
             view.map(rseqc.genebody_coverage, *rseq_args)
             view.map(rseqc.junction_annotation, *rseq_args)
+            view.map(sam.bamindex, curr_files)
             RPKM_count_out = view.map(rseqc.RPKM_count, *rseq_args)
             view.map(rseqc.fix_RPKM_count_file, RPKM_count_out)
             """
