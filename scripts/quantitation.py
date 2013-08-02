@@ -71,6 +71,7 @@ def main(config, view):
             view.map(rseqc.bam_stat, *rseq_args)
             view.map(rseqc.genebody_coverage, *rseq_args)
             view.map(rseqc.junction_annotation, *rseq_args)
+            view.map(sam.bamindex, curr_files)
             RPKM_count_out = view.map(rseqc.RPKM_count, *rseq_args)
             view.map(rseqc.fix_RPKM_count_file, RPKM_count_out)
             #view.map(rseqc.junction_saturation, *rseq_args)
