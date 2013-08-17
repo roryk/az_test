@@ -173,8 +173,16 @@ if __name__ == "__main__":
     startup_config["parallel"] = parallel
     cluster_config = startup_config["cluster"]
     cores_per_job = cluster_config.get("cores_per_job", 1)
-    with cluster_view(cluster_config["scheduler"],
-                      cluster_config["queue"],
-                      cluster_config["cores"],
-                      cores_per_job) as view:
-        main(startup_config, view)
+    if startup_config["cluster"].get("local", False):
+        main(startup_config, DummyView())
+    else:
+        with cluster_view(cluster_config["scheduler"],
+                          cluster_config["queue"],
+                          cluster_config["cores"],
+                          cores_per_job) as view:
+            main(startup_config, view)
+
+class DummyView(object):
+
+    def __init__(self):
+        self.map = map

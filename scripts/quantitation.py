@@ -102,8 +102,17 @@ if __name__ == "__main__":
     parallel = create_base_logger(startup_config, {"type": "ipython"})
     setup_local_logging(startup_config, parallel)
     startup_config["parallel"] = parallel
-    cluster_config = startup_config["cluster"]
-    with cluster_view(cluster_config["scheduler"],
-                      cluster_config["queue"],
-                      cluster_config["cores"]) as view:
-        main(startup_config, view)
+
+    if startup_config["cluster"].get("local", False):
+        main(startup_config, DummyView())
+    else:
+        cluster_config = startup_config["cluster"]
+        with cluster_view(cluster_config["scheduler"],
+                          cluster_config["queue"],
+                          cluster_config["cores"]) as view:
+            main(startup_config, view)
+
+class DummyView(object):
+
+    def __init__(self):
+        self.map = map
